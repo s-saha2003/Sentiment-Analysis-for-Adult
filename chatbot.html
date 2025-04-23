@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sentiment Analysis Chatbot</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      height: 100vh;
+      background: linear-gradient(135deg, #1F1C2C, #928DAB);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-container {
+      width: 90%;
+      max-width: 800px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 25px;
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .question p {
+      font-size: 1.6rem;
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .options button {
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(45deg, #00C9FF, #92FE9D);
+      color: #000;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.3s ease;
+    }
+
+    .options button:hover {
+      background: linear-gradient(45deg, #FF6FD8, #3813C2);
+      color: #fff;
+      transform: scale(1.03);
+    }
+
+    #downloadBtn {
+      display: none;
+      margin-top: 30px;
+      width: 100%;
+      padding: 15px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: linear-gradient(to right, #f12711, #f5af19);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #downloadBtn:hover {
+      background: linear-gradient(to right, #00f260, #0575e6);
+      transform: scale(1.05);
+    }
+
+    h3 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #eee;
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-container">
+    <div id="chat"></div>
+    <button id="downloadBtn">💾 Save my response</button>
+  </div>
+
+  <script>
+    const questions = [
+      { q: "What is your age?", options: ["18-25", "26-35", "36-45", "46+"] },
+      { q: "What is your gender?", options: ["Male", "Female", "Other"] },
+      { q: "How often do you use social media?", options: ["Daily", "Weekly", "Monthly", "Rarely"] },
+      { q: "How many hours per day do you spend on social media?", options: ["0-6", "6-12", "12-18", "18-24"] },
+      { q: "How often do you post your thoughts or feelings online?", options: ["Yes", "No", "Sometimes"] },
+      { q: "Have you ever felt negative emotions after viewing content online?", options: ["Always", "Sometimes", "Rarely", "Never"] },
+      { q: "How do you typically respond when you feel emotionally triggered by content?", options: ["Comment", "Share", "Ignore"] },
+      { q: "Do you feel supported by your online community when expressing emotions?", options: ["Often", "Sometimes", "Rarely", "Never"] },
+      { q: "How often do you engage in discussions about mental health online?", options: ["Often", "Sometimes", "Rarely", "Never"] },
+      { q: "How has online content impacted your mental health in the past year?", options: ["Positively", "Negatively", "No impact"] },
+      { q: "Do you feel more or less anxious after spending time on social media?", options: ["More", "Less", "No change"] },
+      { q: "Have you experienced online harassment related to emotional expressions?", options: ["Yes", "No"] },
+      { q: "How do you manage emotional reactions to negative content online?", options: ["Unfollow", "Block", "Report", "Ignore"] },
+      { q: "Have you taken a break from social media for mental health?", options: ["Yes", "No"] },
+      { q: "How often do you notice tone shifts in online conversations?", options: ["Often", "Sometimes", "Rarely", "Never"] },
+      { q: "Have you reached out to someone online for emotional support?", options: ["Yes", "No"] },
+      { q: "How often do you offer emotional support online?", options: ["Often", "Sometimes", "Rarely", "Never"] },
+      { q: "How do you feel after providing emotional support?", options: ["Satisfied", "Drained", "Indifferent"] },
+      { q: "Do social media platforms influence how you process emotions?", options: ["Yes", "No"] },
+      { q: "Do you think AI sentiment analysis can assess online emotions?", options: ["Yes", "No"] },
+      { q: "Should sentiment analysis be used to moderate emotional content?", options: ["Yes", "No"] },
+      { q: "How do you feel about your emotional data being used in sentiment analysis?", options: ["Comfortable", "Uncomfortable", "Neutral"] },
+      { q: "Do you support sentiment analysis in mental health applications?", options: ["Supportive", "Against", "Unsure"] },
+      { q: "Would you like personalized content based on emotional state?", options: ["Yes", "No"] },
+      { q: "Do you want to retake the survey?", options: ["Yes", "No"] }
+    ];
+
+    let currentQuestion = 0;
+    let responses = [];
+    const chat = document.getElementById('chat');
+
+    function showQuestion() {
+      if (currentQuestion >= questions.length) {
+        const restart = responses.find(r => r.question === "Do you want to retake the survey?")?.answer;
+        if (restart === "Yes") {
+          responses = [];
+          currentQuestion = 0;
+          localStorage.removeItem('sentimentSurvey');
+          showQuestion();
+          return;
+        }
+        analyzeSentiment();
+        showAnalysis();
+        document.getElementById('downloadBtn').style.display = 'block';
+        return;
+      }
+
+      const q = questions[currentQuestion];
+      chat.innerHTML = `
+        <div class="question">
+          <p>${q.q}</p>
+          <div class="options">
+            ${q.options.map(opt => `<button onclick="saveResponse('${opt}')">${opt}</button>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    function saveResponse(answer) {
+      responses.push({ question: questions[currentQuestion].q, answer });
+      localStorage.setItem('sentimentSurvey', JSON.stringify(responses));
+      currentQuestion++;
+      showQuestion();
+    }
+
+    function analyzeSentiment() {
+      const keywords = {
+        positive: ["Positively", "Supportive", "Satisfied", "Comfortable", "Less"],
+        negative: ["Negatively", "Drained", "Uncomfortable", "More"]
+      };
+      let score = 0;
+
+      responses.forEach(r => {
+        if (keywords.positive.includes(r.answer)) score++;
+        if (keywords.negative.includes(r.answer)) score--;
+      });
+
+      let sentiment = 'Neutral';
+      if (score > 2) sentiment = 'Positive';
+      else if (score < -2) sentiment = 'Negative';
+
+      chat.innerHTML = `<h3>Thank you! Based on your responses:</h3>
+                        <p><strong>Overall Sentiment:</strong> ${sentiment}</p>`;
+    }
+
+    function showAnalysis() {
+      const usage = responses.find(r => r.question.includes("How often do you use social media"))?.answer || "";
+      const hours = responses.find(r => r.question.includes("hours per day"))?.answer || "";
+      let level = "";
+
+      if (usage === "Daily" && hours === "18-24") level = "Extreme addiction";
+      else if (usage === "Daily" && ["6-12", "12-18"].includes(hours)) level = "High addiction";
+      else if (usage === "Weekly" && hours === "6-12") level = "Moderate addiction";
+      else level = "Minimal addiction";
+
+      chat.innerHTML += `<p><strong>Social Media Addiction Level:</strong> ${level}</p>`;
+    }
+
+    function downloadCSV() {
+      const csv = responses.map(r => `"${r.question}","${r.answer}"`).join("\n");
+      const blob = new Blob(["Question,Answer\n" + csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sentiment_analysis_responses.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
+
+    showQuestion();
+  </script>
+
+</body>
+</html>
